@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma validate:*)",
+      "Bash(npm install:*)",
+      "Bash(docker compose:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@latest add button card dialog sheet badge input textarea label select skeleton separator dropdown-menu scroll-area tabs sonner -y)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

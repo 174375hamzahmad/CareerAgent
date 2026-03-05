@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  userId         String
+
+  // Core details — AI extracted
+  company        String
+  role           String
+  salary         String?
+  location       String?
+  remote         Boolean   @default(false)
+  url            String?
+  description    String?
+  requirements   String[]
+
+  // Tracking
+  status         Status    @default(SAVED)
+  appliedAt      DateTime?
+  followUpAt     DateTime?
+  followUpSent   Boolean   @default(false)
+
+  // User filled
+  notes          String?
+  recruiter      String?
+  recruiterEmail String?
+
+  // AI generated
+  interviewPrep  String?
+
+  // Resume used for this application
+  resumeId       String?
+  resume         Resume?   @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+
+  // Relations
+  events         Event[]
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  fileUrl   String
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs      Job[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type      String   // "applied" | "phone_screen" | "technical" | "offer" | "rejected" | "note"
+  note      String?
+  date      DateTime @default(now())
+}
+
+enum Status {
+  SAVED
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+}
