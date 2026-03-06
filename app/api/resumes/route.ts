@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const ext = file.name.split(".").pop() || "pdf";
   const filename = `${Date.now()}-${userId.slice(-6)}.${ext}`;
 
-  const blob = await put(filename, file, { access: "public" });
+  const blob = await put(filename, file, { access: "private" });
 
   const resume = await prisma.resume.create({
     data: {
