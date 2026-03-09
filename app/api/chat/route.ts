@@ -19,7 +19,7 @@ const tools: Anthropic.Tool[] = [
       properties: {
         status: {
           type: "string",
-          enum: ["SAVED", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"],
+          enum: ["APPLIED", "FOLLOWED_UP", "INTERVIEW", "OFFER", "REJECTED"],
         },
       },
       required: ["status"],
@@ -48,7 +48,7 @@ async function runTool(name: string, userId: string) {
 
   if (name === "get_stats") {
     const jobs = await prisma.job.findMany({ where: { userId } });
-    const applied = jobs.filter((j: { status: string }) => j.status !== "SAVED").length;
+    const applied = jobs.filter((j: { status: string }) => j.status !== "APPLIED").length;
     const interviews = jobs.filter((j: { status: string }) =>
       ["INTERVIEW", "OFFER"].includes(j.status)
     ).length;

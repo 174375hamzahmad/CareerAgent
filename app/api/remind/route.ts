@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     where: {
       followUpAt: { lte: now },
       followUpSent: false,
-      status: { in: ["APPLIED", "INTERVIEW"] },
+      status: { in: ["FOLLOWED_UP", "INTERVIEW"] },
     },
   });
 

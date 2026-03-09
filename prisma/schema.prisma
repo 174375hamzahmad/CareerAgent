@@ -28,7 +28,7 @@ model Job {
   requirements   String[]
 
   // Tracking
-  status         Status    @default(SAVED)
+  status         Status    @default(APPLIED)
   appliedAt      DateTime?
   followUpAt     DateTime?
   followUpSent   Boolean   @default(false)
@@ -75,8 +75,8 @@ model Event {
 }
 
 enum Status {
-  SAVED
   APPLIED
+  FOLLOWED_UP
   INTERVIEW
   OFFER
   REJECTED

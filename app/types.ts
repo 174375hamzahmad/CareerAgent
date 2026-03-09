@@ -1,4 +1,4 @@
-export type Status = "SAVED" | "APPLIED" | "INTERVIEW" | "OFFER" | "REJECTED";
+export type Status = "APPLIED" | "FOLLOWED_UP" | "INTERVIEW" | "OFFER" | "REJECTED";
 
 export interface Resume {
   id: string;

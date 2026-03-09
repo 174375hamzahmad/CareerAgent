@@ -20,12 +20,12 @@ import ResumePicker from "./ResumePicker";
 import ResumeManager from "./ResumeManager";
 
 const PIPELINE: { value: Status; label: string; icon: typeof Bookmark }[] = [
-  { value: "SAVED",     label: "Saved",     icon: Bookmark },
-  { value: "APPLIED",   label: "Applied",   icon: Send },
-  { value: "INTERVIEW", label: "Interview", icon: Users },
-  { value: "OFFER",     label: "Offer",     icon: Trophy },
+  { value: "APPLIED",     label: "Applied",     icon: Bookmark },
+  { value: "FOLLOWED_UP", label: "Followed Up", icon: Send },
+  { value: "INTERVIEW",   label: "Interview",   icon: Users },
+  { value: "OFFER",       label: "Offer",       icon: Trophy },
 ];
-const PIPELINE_ORDER = ["SAVED", "APPLIED", "INTERVIEW", "OFFER"] as const;
+const PIPELINE_ORDER = ["APPLIED", "FOLLOWED_UP", "INTERVIEW", "OFFER"] as const;
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{children}</p>
@@ -43,6 +43,7 @@ export default function JobDetailPanel({
   const [recruiter, setRecruiter] = useState(job.recruiter ?? "");
   const [recruiterEmail, setRecruiterEmail] = useState(job.recruiterEmail ?? "");
   const [followUpAt, setFollowUpAt] = useState(job.followUpAt ? job.followUpAt.split("T")[0] : "");
+  const [appliedAt, setAppliedAt] = useState(job.appliedAt ? job.appliedAt.split("T")[0] : "");
   const [saving, setSaving] = useState(false);
 
   // Sync editable fields when the job prop changes (e.g. after a status update returns fresh data)
@@ -51,6 +52,7 @@ export default function JobDetailPanel({
     setRecruiter(job.recruiter ?? "");
     setRecruiterEmail(job.recruiterEmail ?? "");
     setFollowUpAt(job.followUpAt ? job.followUpAt.split("T")[0] : "");
+    setAppliedAt(job.appliedAt ? job.appliedAt.split("T")[0] : "");
   }, [job]);
   const [generatingPrep, setGeneratingPrep] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -78,6 +80,7 @@ export default function JobDetailPanel({
       notes: notes || null,
       recruiter: recruiter || null,
       recruiterEmail: recruiterEmail || null,
+      appliedAt: appliedAt ? new Date(appliedAt).toISOString() : null,
       followUpAt: followUpAt ? new Date(followUpAt).toISOString() : null,
     });
     if (ok) toast.success("Changes saved");
@@ -160,7 +163,7 @@ export default function JobDetailPanel({
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleStatusChange("APPLIED")}
+                          onClick={() => handleStatusChange("FOLLOWED_UP")}
                           className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors"
                         >
                           Reopen application
@@ -323,9 +326,15 @@ export default function JobDetailPanel({
                   <Input value={recruiterEmail} onChange={(e) => setRecruiterEmail(e.target.value)} placeholder="email@co.com" type="email" />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="flex items-center gap-1"><Clock className="w-3 h-3" />Follow-up reminder</Label>
-                <Input value={followUpAt} onChange={(e) => setFollowUpAt(e.target.value)} type="date" className="w-fit" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Date applied</Label>
+                  <Input value={appliedAt} onChange={(e) => setAppliedAt(e.target.value)} type="date" className="w-full" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1"><Clock className="w-3 h-3" />Follow-up reminder</Label>
+                  <Input value={followUpAt} onChange={(e) => setFollowUpAt(e.target.value)} type="date" className="w-full" />
+                </div>
               </div>
               <Button type="button" onClick={handleSaveDetails} disabled={saving} className="w-full">
                 {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : "Save changes"}

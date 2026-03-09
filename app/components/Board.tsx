@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Search, SlidersHorizontal, MessageSquare, TrendingUp, Briefcase, CalendarCheck, Award, Moon, Sun, FileText } from "lucide-react";
 
-const STATUSES: Status[] = ["SAVED", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"];
+const STATUSES: Status[] = ["APPLIED", "FOLLOWED_UP", "INTERVIEW", "OFFER", "REJECTED"];
 
 type DateFilter = "all" | "week" | "month";
 type SortBy = "newest" | "oldest" | "company";
@@ -82,7 +82,7 @@ export default function Board() {
 
   // Stats
   const stats = useMemo(() => {
-    const applied = jobs.filter((j) => j.status !== "SAVED").length;
+    const applied = jobs.filter((j) => j.status !== "APPLIED").length;
     const interviews = jobs.filter((j) => ["INTERVIEW", "OFFER"].includes(j.status)).length;
     const offers = jobs.filter((j) => j.status === "OFFER").length;
     const offerRate = applied > 0 ? Math.round((offers / applied) * 100) : 0;
@@ -105,7 +105,7 @@ export default function Board() {
 
     setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, status: newStatus } : j));
     const body: Record<string, unknown> = { status: newStatus };
-    if (newStatus === "APPLIED" && !job.appliedAt) body.appliedAt = new Date().toISOString();
+    if (newStatus === "FOLLOWED_UP" && !job.appliedAt) body.appliedAt = new Date().toISOString();
 
     const res = await fetch(`/api/jobs/${jobId}`, {
       method: "PATCH",
