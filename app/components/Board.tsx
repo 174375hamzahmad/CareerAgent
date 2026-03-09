@@ -191,7 +191,7 @@ export default function Board() {
             >
               {mounted && (resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />)}
             </Button>
-            <UserButton />
+            <div suppressHydrationWarning><UserButton /></div>
           </div>
         </div>
       </header>

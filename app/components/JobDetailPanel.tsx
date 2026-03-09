@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Job, Status } from "../types";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -43,17 +43,46 @@ export default function JobDetailPanel({
   const [recruiter, setRecruiter] = useState(job.recruiter ?? "");
   const [recruiterEmail, setRecruiterEmail] = useState(job.recruiterEmail ?? "");
   const [followUpAt, setFollowUpAt] = useState(job.followUpAt ? job.followUpAt.split("T")[0] : "");
-  const [appliedAt, setAppliedAt] = useState(job.appliedAt ? job.appliedAt.split("T")[0] : "");
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const isDirtyRef = useRef(false);
 
-  // Sync editable fields when the job prop changes (e.g. after a status update returns fresh data)
+  // Sync editable fields when the job prop changes; reset dirty flag so auto-save doesn't fire
   useEffect(() => {
+    isDirtyRef.current = false;
     setNotes(job.notes ?? "");
     setRecruiter(job.recruiter ?? "");
     setRecruiterEmail(job.recruiterEmail ?? "");
     setFollowUpAt(job.followUpAt ? job.followUpAt.split("T")[0] : "");
-    setAppliedAt(job.appliedAt ? job.appliedAt.split("T")[0] : "");
   }, [job]);
+
+  // Auto-save with debounce — only runs when user has actually changed a field
+  useEffect(() => {
+    if (!isDirtyRef.current) return;
+    setSaveStatus("saving");
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notes: notes || null,
+          recruiter: recruiter || null,
+          recruiterEmail: recruiterEmail || null,
+          followUpAt: followUpAt ? new Date(followUpAt).toISOString() : null,
+        }),
+      });
+      if (res.ok) {
+        onUpdated(await res.json());
+        isDirtyRef.current = false;
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } else {
+        toast.error("Failed to save");
+        setSaveStatus("idle");
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, recruiter, recruiterEmail, followUpAt]);
   const [generatingPrep, setGeneratingPrep] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showResumeManager, setShowResumeManager] = useState(false);
@@ -74,19 +103,6 @@ export default function JobDetailPanel({
     if (ok) toast.success(`Status → ${status.toLowerCase()}`);
   }
 
-  async function handleSaveDetails() {
-    setSaving(true);
-    const ok = await patch({
-      notes: notes || null,
-      recruiter: recruiter || null,
-      recruiterEmail: recruiterEmail || null,
-      appliedAt: appliedAt ? new Date(appliedAt).toISOString() : null,
-      followUpAt: followUpAt ? new Date(followUpAt).toISOString() : null,
-    });
-    if (ok) toast.success("Changes saved");
-    else toast.error("Failed to save");
-    setSaving(false);
-  }
 
   async function handleGeneratePrep() {
     setGeneratingPrep(true);
@@ -311,34 +327,29 @@ export default function JobDetailPanel({
 
             {/* Details */}
             <div className="space-y-4">
-              <SectionLabel>Details</SectionLabel>
+              <div className="flex items-center justify-between">
+                <SectionLabel>Details</SectionLabel>
+                {saveStatus === "saving" && <span className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Saving…</span>}
+                {saveStatus === "saved" && <span className="text-xs text-emerald-500 flex items-center gap-1"><Check className="w-3 h-3" />Saved</span>}
+              </div>
               <div className="space-y-1.5">
                 <Label>Notes</Label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="resize-none" placeholder="Personal notes..." />
+                <Textarea value={notes} onChange={(e) => { isDirtyRef.current = true; setNotes(e.target.value); }} rows={3} className="resize-none" placeholder="Personal notes..." />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1"><User className="w-3 h-3" />Recruiter</Label>
-                  <Input value={recruiter} onChange={(e) => setRecruiter(e.target.value)} placeholder="Name" />
+                  <Input value={recruiter} onChange={(e) => { isDirtyRef.current = true; setRecruiter(e.target.value); }} placeholder="Name" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1"><Mail className="w-3 h-3" />Email</Label>
-                  <Input value={recruiterEmail} onChange={(e) => setRecruiterEmail(e.target.value)} placeholder="email@co.com" type="email" />
+                  <Input value={recruiterEmail} onChange={(e) => { isDirtyRef.current = true; setRecruiterEmail(e.target.value); }} placeholder="email@co.com" type="email" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Date applied</Label>
-                  <Input value={appliedAt} onChange={(e) => setAppliedAt(e.target.value)} type="date" className="w-full" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1"><Clock className="w-3 h-3" />Follow-up reminder</Label>
-                  <Input value={followUpAt} onChange={(e) => setFollowUpAt(e.target.value)} type="date" className="w-full" />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1"><Clock className="w-3 h-3" />Follow-up reminder</Label>
+                <Input value={followUpAt} onChange={(e) => { isDirtyRef.current = true; setFollowUpAt(e.target.value); }} type="date" className="w-fit" />
               </div>
-              <Button type="button" onClick={handleSaveDetails} disabled={saving} className="w-full">
-                {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : "Save changes"}
-              </Button>
             </div>
 
             {/* Timeline */}

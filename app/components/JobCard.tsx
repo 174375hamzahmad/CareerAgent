@@ -86,12 +86,12 @@ export default function JobCard({
               </div>
             )}
 
-            {(job.appliedAt || job.createdAt || job.resumeId) && (
+            {(job.createdAt || job.resumeId) && (
               <div className="flex items-center justify-between mt-2.5">
-                {(job.appliedAt || job.createdAt) && (
+                {job.createdAt && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <CalendarDays className="w-3 h-3" />
-                    {new Date(job.appliedAt ?? job.createdAt).toLocaleDateString()}
+                    {new Date(job.createdAt).toLocaleDateString()}
                   </div>
                 )}
                 {job.resumeId && (
