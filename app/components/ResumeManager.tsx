@@ -62,8 +62,9 @@ export default function ResumeManager({
       await load();
       onResumesChanged?.();
     } else {
-      const data = await res.json();
-      toast.error(data.error ?? "Upload failed");
+      let msg = "Upload failed";
+      try { msg = (await res.json()).error ?? msg; } catch { /* non-JSON error */ }
+      toast.error(msg);
     }
     setUploading(false);
   }
@@ -139,7 +140,7 @@ export default function ResumeManager({
                     {new Date(r.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <a href={r.fileUrl} target="_blank" rel="noopener noreferrer">
+                <a href={`/api/resumes/${r.id}/view`} target="_blank" rel="noopener noreferrer">
                   <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Button>

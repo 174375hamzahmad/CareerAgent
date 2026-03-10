@@ -82,7 +82,7 @@ export default function Board() {
 
   // Stats
   const stats = useMemo(() => {
-    const applied = jobs.filter((j) => j.status !== "APPLIED").length;
+    const applied = jobs.filter((j) => j.status === "APPLIED").length;
     const interviews = jobs.filter((j) => ["INTERVIEW", "OFFER"].includes(j.status)).length;
     const offers = jobs.filter((j) => j.status === "OFFER").length;
     const offerRate = applied > 0 ? Math.round((offers / applied) * 100) : 0;
@@ -123,20 +123,21 @@ export default function Board() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
-        <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center gap-4">
-          <div className="flex items-center gap-2 mr-2">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-2.5 flex flex-wrap items-center gap-2 lg:gap-3">
+          {/* Logo */}
+          <div className="flex items-center gap-2 shrink-0 mr-1">
             <Briefcase className="w-5 h-5 text-primary" />
-            <h1 className="text-lg font-bold">CareerAgent</h1>
+            <h1 className="text-base lg:text-lg font-bold">CareerAgent</h1>
           </div>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-xs">
+          {/* Search — full width on wrap, constrained on wide screens */}
+          <div className="relative order-last w-full sm:order-none sm:w-auto sm:flex-1 sm:max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search company or role..."
-              className="pl-8 h-8 text-sm"
+              className="pl-8 h-8 text-sm w-full"
             />
           </div>
 
@@ -144,7 +145,8 @@ export default function Board() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                <SlidersHorizontal className="w-3.5 h-3.5" />{dateFilterLabel}
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">{dateFilterLabel}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -159,8 +161,9 @@ export default function Board() {
           {/* Sort */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs">
-                {sortLabel}
+              <Button variant="outline" size="sm" className="h-8 text-xs hidden sm:flex">
+                <span className="hidden lg:inline">{sortLabel}</span>
+                <span className="lg:hidden">Sort</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -172,15 +175,15 @@ export default function Board() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setShowResumeManager(true)}>
-              <FileText className="w-3.5 h-3.5" /> Resumes
+          <div className="flex items-center gap-1.5 ml-auto">
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs hidden md:flex" onClick={() => setShowResumeManager(true)}>
+              <FileText className="w-3.5 h-3.5" /><span className="hidden lg:inline">Resumes</span>
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setShowChat(true)}>
-              <MessageSquare className="w-3.5 h-3.5" /> AI Chat
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs hidden md:flex" onClick={() => setShowChat(true)}>
+              <MessageSquare className="w-3.5 h-3.5" /><span className="hidden lg:inline">AI Chat</span>
             </Button>
             <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setShowAddModal(true)}>
-              <Plus className="w-3.5 h-3.5" /> Add Job
+              <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Job</span>
             </Button>
             <Button
               variant="ghost"
@@ -198,8 +201,8 @@ export default function Board() {
 
       {/* Stats bar */}
       {!loading && jobs.length > 0 && (
-        <div className="border-b bg-muted/30">
-          <div className="max-w-screen-2xl mx-auto px-6 py-2 flex items-center gap-6">
+        <div className="border-b bg-muted/30 overflow-x-auto">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-2 flex items-center gap-4 lg:gap-6 min-w-max">
             {[
               { icon: Briefcase, label: "Total", value: stats.total, color: "text-foreground" },
               { icon: CalendarCheck, label: "Applied", value: stats.applied, color: "text-blue-600 dark:text-blue-400" },
@@ -217,14 +220,14 @@ export default function Board() {
       )}
 
       {/* Board */}
-      <main className="flex-1 p-6 overflow-x-auto">
+      <main className="flex-1 p-4 lg:p-6 overflow-x-auto">
         {loading ? (
-          <div className="flex gap-5">
+          <div className="flex gap-4">
             {STATUSES.map((s) => <JobColumnSkeleton key={s} status={s} />)}
           </div>
         ) : (
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <div className="flex gap-5 min-w-max pb-4">
+            <div className="flex gap-4 min-w-max pb-4">
               {STATUSES.map((s) => (
                 <JobColumn key={s} status={s} jobs={byStatus[s]} onJobClick={setSelectedJob} />
               ))}

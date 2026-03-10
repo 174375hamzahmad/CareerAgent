@@ -2,7 +2,6 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { Job, Status } from "../types";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobCard from "./JobCard";
 import { Inbox } from "lucide-react";
@@ -15,10 +14,12 @@ const COLUMN_META: Record<Status, { label: string; accent: string; bg: string; b
   REJECTED:  { label: "Rejected",  accent: "border-t-rose-500",   bg: "bg-rose-50/50 dark:bg-rose-950/20",    badge: "bg-rose-100 text-rose-600 dark:bg-rose-900/50 dark:text-rose-300" },
 };
 
+const columnWidth = (status: Status) => status === "APPLIED" ? "w-80" : "w-64";
+
 export function JobColumnSkeleton({ status }: { status: Status }) {
   const meta = COLUMN_META[status];
   return (
-    <div className="flex-shrink-0 w-72">
+    <div className={`flex-shrink-0 ${columnWidth(status)}`}>
       <div className={`rounded-xl border border-t-4 ${meta.accent} ${meta.bg} p-3`}>
         <div className="flex items-center justify-between mb-3 px-1">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{meta.label}</span>
@@ -45,7 +46,7 @@ export default function JobColumn({
   const meta = COLUMN_META[status];
 
   return (
-    <div className="flex-shrink-0 w-72">
+    <div className={`flex-shrink-0 ${columnWidth(status)}`}>
       <div
         className={`rounded-xl border border-t-4 ${meta.accent} transition-all ${meta.bg} ${
           isOver ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""

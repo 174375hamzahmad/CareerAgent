@@ -28,9 +28,19 @@ export async function POST(req: Request) {
   }
 
   const ext = file.name.split(".").pop() || "pdf";
-  const filename = `${Date.now()}-${userId.slice(-6)}.${ext}`;
+  const filename = `resumes/${Date.now()}-${userId.slice(-6)}.${ext}`;
 
-  const blob = await put(filename, file, { access: "private" });
+  let blob;
+  try {
+    blob = await put(filename, file, {
+      access: "private",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+  } catch (err) {
+    console.error("Blob upload error:", err);
+    const msg = err instanceof Error ? err.message : "Blob upload failed";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   const resume = await prisma.resume.create({
     data: {
