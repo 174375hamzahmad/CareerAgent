@@ -222,12 +222,12 @@ export default function Board() {
       {/* Board */}
       <main className="flex-1 p-4 lg:p-6 overflow-x-auto">
         {loading ? (
-          <div className="flex gap-4">
+          <div className="flex gap-4 w-fit mx-auto">
             {STATUSES.map((s) => <JobColumnSkeleton key={s} status={s} />)}
           </div>
         ) : (
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <div className="flex gap-4 min-w-max pb-4">
+            <div className="flex gap-4 w-fit mx-auto pb-4">
               {STATUSES.map((s) => (
                 <JobColumn key={s} status={s} jobs={byStatus[s]} onJobClick={setSelectedJob} />
               ))}
