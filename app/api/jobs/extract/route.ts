@@ -1,30 +1,23 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { generateObject } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+import { z } from "zod";
 
-const client = new Anthropic();
-
-const extractTool: Anthropic.Tool = {
-  name: "extract_job_details",
-  description: "Extract structured job details from a job posting",
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      company: { type: "string", description: "Company name" },
-      role: { type: "string", description: "Job title / role" },
-      salary: { type: "string", description: "Salary or compensation range, as written. Null if not mentioned." },
-      location: { type: "string", description: "City, state, or country. Null if not mentioned." },
-      remote: { type: "boolean", description: "True if remote or hybrid is mentioned" },
-      description: { type: "string", description: "2-3 sentence summary of the role" },
-      requirements: {
-        type: "array",
-        items: { type: "string" },
-        description: "Key skills and requirements, each as a short phrase e.g. 'React', '5+ years experience', 'TypeScript'",
-      },
-    },
-    required: ["company", "role", "remote", "requirements"],
-  },
-};
+// Zod schema replaces the raw JSON input_schema we passed to the Anthropic tool.
+// generateObject uses this to force Claude to return exactly this shape,
+// and TypeScript knows the type of `object` without any casting.
+const JobSchema = z.object({
+  company: z.string().describe("Company name"),
+  role: z.string().describe("Job title / role"),
+  salary: z.string().nullable().describe("Salary or compensation range, as written. Null if not mentioned."),
+  location: z.string().nullable().describe("City, state, or country. Null if not mentioned."),
+  remote: z.boolean().describe("True if remote or hybrid is mentioned"),
+  description: z.string().describe("2-3 sentence summary of the role"),
+  requirements: z
+    .array(z.string())
+    .describe("Key skills and requirements, each as a short phrase e.g. 'React', '5+ years experience'"),
+});
 
 async function fetchPageText(url: string): Promise<string> {
   const res = await fetch(url, {
@@ -32,14 +25,13 @@ async function fetchPageText(url: string): Promise<string> {
     signal: AbortSignal.timeout(8000),
   });
   const html = await res.text();
-  // Strip HTML tags to get readable text
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 15000); // Keep within token limits
+    .slice(0, 15000);
 }
 
 export async function POST(req: Request) {
@@ -65,33 +57,14 @@ export async function POST(req: Request) {
     }
   }
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    tools: [extractTool],
-    tool_choice: { type: "any" },
-    messages: [
-      {
-        role: "user",
-        content: `Extract the job details from this posting:\n\n${jobText}`,
-      },
-    ],
+  // generateObject replaces: client.messages.create → find tool_use block → cast .input
+  // Now Claude is constrained to return exactly the JobSchema shape.
+  // `object` is fully typed as z.infer<typeof JobSchema> — no `as Record<string, unknown>` needed.
+  const { object } = await generateObject({
+    model: anthropic("claude-sonnet-4-6"),
+    schema: JobSchema,
+    prompt: `Extract the job details from this posting:\n\n${jobText}`,
   });
 
-  const toolUse = response.content.find((b) => b.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
-    return NextResponse.json({ error: "AI could not extract job details" }, { status: 500 });
-  }
-
-  const raw = toolUse.input as Record<string, unknown>;
-  // Normalize: convert string "null" / "none" / empty → actual null
-  const nullify = (v: unknown) =>
-    typeof v === "string" && /^(null|none|n\/a)$/i.test(v.trim()) ? null : v ?? null;
-
-  return NextResponse.json({
-    ...raw,
-    salary: nullify(raw.salary),
-    location: nullify(raw.location),
-    url: url ?? null,
-  });
+  return NextResponse.json({ ...object, url: url ?? null });
 }

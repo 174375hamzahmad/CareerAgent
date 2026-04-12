@@ -1,9 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { generateText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { prisma } from "@/lib/prisma";
-
-const client = new Anthropic();
 
 export async function POST(
   _req: Request,
@@ -19,13 +18,12 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: `Generate concise interview prep for this role:
+  // generateText replaces client.messages.create + the manual .content.find(b => b.type === "text")
+  // unwrapping. `text` is just a string directly.
+  const { text } = await generateText({
+    model: anthropic("claude-sonnet-4-6"),
+    maxOutputTokens: 1024,
+    prompt: `Generate concise interview prep for this role:
 
 Company: ${job.company}
 Role: ${job.role}
@@ -43,16 +41,11 @@ Provide:
 (thoughtful questions that show genuine interest)
 
 Be specific. No generic advice.`,
-      },
-    ],
   });
-
-  const textBlock = response.content.find((b) => b.type === "text");
-  const interviewPrep = textBlock?.type === "text" ? textBlock.text : "";
 
   const updated = await prisma.job.update({
     where: { id },
-    data: { interviewPrep },
+    data: { interviewPrep: text },
     include: { events: { orderBy: { date: "desc" } } },
   });
 
