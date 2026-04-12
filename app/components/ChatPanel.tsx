@@ -1,16 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useChat } from "@ai-sdk/react";
+import { isTextUIPart } from "ai";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Send, Loader2, Sparkles } from "lucide-react";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
 
 const SUGGESTIONS = [
   "What's my interview rate?",
@@ -20,35 +17,25 @@ const SUGGESTIONS = [
 ];
 
 export default function ChatPanel({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  async function sendMessage(text: string) {
-    if (!text.trim() || loading) return;
-    const userMsg: Message = { role: "user", content: text };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput("");
-    setLoading(true);
+  // In AI SDK v6, useChat no longer manages input state.
+  // It exposes: messages, sendMessage, status, stop, regenerate.
+  // - `messages` is UIMessage[] — each has `.parts` (typed array) not `.content`
+  // - `status`: 'submitted' | 'streaming' | 'ready' | 'error'
+  // - `sendMessage({ text })` sends a message and triggers the API call
+  const { messages, sendMessage, status } = useChat();
+  const isLoading = status === "submitted" || status === "streaming";
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const data = await res.json();
-      setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Try again." }]);
-    } finally {
-      setLoading(false);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-    }
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function submit(text: string) {
+    if (!text.trim() || isLoading) return;
+    setInput("");
+    sendMessage({ text });
   }
 
   return (
@@ -79,7 +66,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
                   <button
                     key={s}
                     type="button"
-                    onClick={() => sendMessage(s)}
+                    onClick={() => submit(s)}
                     className="w-full text-left text-sm px-3 py-2.5 rounded-lg border hover:bg-muted transition-colors"
                   >
                     {s}
@@ -89,20 +76,27 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted text-foreground rounded-bl-sm"
-                    }`}
-                  >
-                    {msg.content}
+              {messages.map((msg) => {
+                // In v6, message content is in msg.parts — an array of typed parts.
+                // isTextUIPart() narrows each part to TextUIPart ({ type: 'text', text: string }).
+                const text = msg.parts.filter(isTextUIPart).map((p) => p.text).join("");
+                if (!text) return null;
+
+                return (
+                  <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted text-foreground rounded-bl-sm"
+                      }`}
+                    >
+                      {text}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {loading && (
+                );
+              })}
+              {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -116,17 +110,17 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
 
         <div className="px-4 py-4 border-t">
           <form
-            onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
+            onSubmit={(e) => { e.preventDefault(); submit(input); }}
             className="flex gap-2"
           >
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything..."
-              disabled={loading}
+              disabled={isLoading}
               className="flex-1"
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || loading}>
+            <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
               <Send className="w-4 h-4" />
             </Button>
           </form>
