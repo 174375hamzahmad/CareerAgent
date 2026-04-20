@@ -150,6 +150,82 @@ The easiest way to deploy is using the [Vercel Platform](https://vercel.com).
 
 Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## MCP Server — Connect Claude Desktop to Your Job Data
+
+CareerAgent exposes an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server at `/api/mcp`. This lets any MCP-compatible client (Claude Desktop, Cursor, etc.) query your job applications directly using natural language.
+
+### Available Tools
+
+| Tool | What it does |
+|---|---|
+| `get_applications` | List applications with optional filters: `status`, `company`, `from`, `to` |
+| `get_application_detail` | Full detail for one job including interview prep and timeline |
+| `update_application_status` | Change a job's status |
+| `get_interview_prep` | Return saved interview prep for a job |
+
+All tools require a `userId` argument (your Clerk user ID) and a bearer token in the `Authorization` header matching `MCP_SECRET`.
+
+### Connecting Claude Desktop
+
+**Step 1 — Get your values**
+
+- **MCP URL**: your deployed app URL + `/api/mcp` (e.g. `https://your-app.vercel.app/api/mcp`)
+- **MCP_SECRET**: the value you set in your `.env` / Vercel environment variables
+- **userId**: your Clerk user ID — find it in the Clerk dashboard under Users
+
+**Step 2 — Edit your Claude Desktop config**
+
+Open `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows) and add:
+
+```json
+{
+  "mcpServers": {
+    "careeragent": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://your-app.vercel.app/api/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_MCP_SECRET"
+      ]
+    }
+  }
+}
+```
+
+Replace `your-app.vercel.app` and `YOUR_MCP_SECRET` with your actual values, then restart Claude Desktop.
+
+**Step 3 — Try it**
+
+Ask Claude Desktop:
+- *"What jobs have I applied to this month?"*
+- *"Show me interview prep for my Meta application"*
+- *"Update my Google application status to INTERVIEW"*
+
+Claude will call your MCP server, fetch live data from your database, and respond with real information.
+
+**Local testing config**
+
+```json
+{
+  "mcpServers": {
+    "careeragent-local": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:3000/api/mcp",
+        "--header",
+        "Authorization: Bearer careeragent-mcp-secret-change-me-in-production"
+      ]
+    }
+  }
+}
+```
+
+> **Security note**: Change `MCP_SECRET` to a strong random string before deploying to production. Set it in Vercel under Settings → Environment Variables.
+
+---
+
 ## License
 
 This project is open source and available under the MIT License.
